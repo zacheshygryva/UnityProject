@@ -10,12 +10,25 @@ public class HeroControll : MonoBehaviour {
 	float JumpTime = 0f;
 	public float MaxJumpTime = 2f;
 	public float JumpSpeed = 2f;
+	public bool super = false;
+	public bool red = false;
+	public float redTime = 0f;
+	public bool death = false;
+	public float deathTime = 0f;
+	public Animator animator;
+
+	SpriteRenderer sr;
+	Transform heroParent = null;
 
 	// Use this for initialization
 	void Start () {
 		myBody = this.GetComponent<Rigidbody2D> ();
+		animator = GetComponent<Animator>();
 		LevelController.current.setStartPosition(transform.position);
+		this.heroParent = this.transform.parent;
+		this.sr = GetComponent<SpriteRenderer>();
 	}
+
 
 	// Update is called once per frame
 	void Update () {
@@ -23,7 +36,8 @@ public class HeroControll : MonoBehaviour {
 	}
 	void FixedUpdate () {
 		float value = Input.GetAxis("Horizontal");
-		Animator animator = GetComponent<Animator>();
+		if (!super)
+			this.makeSmall ();
 		if (Mathf.Abs(value) > 0) {
 			animator.SetBool("run", true);
 			Vector2 vel = myBody.velocity;
@@ -32,7 +46,6 @@ public class HeroControll : MonoBehaviour {
 		}
 		else animator.SetBool("run", false);
 
-		SpriteRenderer sr = GetComponent<SpriteRenderer>();
 		if (value < 0) sr.flipX = true;
 		else if (value > 0) sr.flipX = false;
 
@@ -43,6 +56,11 @@ public class HeroControll : MonoBehaviour {
 		RaycastHit2D hit = Physics2D.Linecast(from, to, layer_id);
 		if (hit) isGrounded = true;
 		else isGrounded = false;
+		if(hit) {
+			if(hit.transform != null && hit.transform.GetComponent<MovingPlatform>() != null)
+				SetNewParent(this.transform, hit.transform);
+		} else SetNewParent(this.transform, this.heroParent);
+
 		if (Input.GetButtonDown("Jump") && isGrounded) this.JumpActive = true;
 		if (this.JumpActive) {
 			if (Input.GetButton("Jump")) {
@@ -58,7 +76,61 @@ public class HeroControll : MonoBehaviour {
 				this.JumpTime = 0;
 			}
 		}
-		if (this.isGrounded) animator.SetBool("jump", false);
-		else animator.SetBool("jump", true);
+		if (this.isGrounded)
+			animator.SetBool("jump", false);
+		else
+			animator.SetBool("jump", true);
+
+		if (death)
+			die ();
+
+		if (red) {
+			redTime -= Time.deltaTime;
+			sr.color = Color.red;
+			if (redTime <= 0)
+				red = false;
+				
+		} else
+			sr.color = Color.white;
 	}
+
+	public void makeSuper() {
+		if (!super) {
+			this.transform.localScale = Vector3.one * 1.5f;
+			this.super = true;
+		}
+	}
+
+	public void makeRed() {
+		makeSmall ();
+		redTime = 4f;
+		red = true;
+	}
+	public void makeSmall() {
+		this.transform.localScale = Vector3.one;
+		super = false;
+	}
+
+	public void triggerDeath(){
+		death = true;
+		deathTime = 0.8f;
+		animator.SetBool ("death", true);
+	}
+	public void die() {
+		animator.SetBool ("death", false);
+		deathTime -= Time.deltaTime;
+		if(deathTime <= 0){
+			death = false;
+			LevelController.current.onRabbitDeath(this);
+		}
+		
+	}
+
+	static void SetNewParent(Transform obj, Transform new_parent) {
+	if(obj.transform.parent != new_parent) {
+		Vector3 pos = obj.transform.position;
+		obj.transform.parent = new_parent;
+		obj.transform.position = pos;
+	}
+}
 }

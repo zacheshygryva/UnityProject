@@ -81,9 +81,6 @@ public class HeroControll : MonoBehaviour {
 		else
 			animator.SetBool("jump", true);
 
-		if (death)
-			die ();
-
 		if (red) {
 			redTime -= Time.deltaTime;
 			sr.color = Color.red;
@@ -112,25 +109,28 @@ public class HeroControll : MonoBehaviour {
 	}
 
 	public void triggerDeath(){
-		death = true;
-		deathTime = 0.8f;
-		animator.SetBool ("death", true);
+		StartCoroutine(die());
 	}
-	public void die() {
+
+	IEnumerator die() {
+		animator.SetBool ("death", true);
+		yield return new WaitForSeconds(0.4f);
 		animator.SetBool ("death", false);
-		deathTime -= Time.deltaTime;
-		if(deathTime <= 0){
-			death = false;
-			LevelController.current.onRabbitDeath(this);
-		}
+		death = false;
+		LevelController.current.onRabbitDeath(this);
 		
 	}
 
 	static void SetNewParent(Transform obj, Transform new_parent) {
-	if(obj.transform.parent != new_parent) {
-		Vector3 pos = obj.transform.position;
-		obj.transform.parent = new_parent;
-		obj.transform.position = pos;
+		if(obj.transform.parent != new_parent) {
+			Vector3 pos = obj.transform.position;
+			obj.transform.parent = new_parent;
+			obj.transform.position = pos;
+		}
 	}
-}
+
+	public static HeroControll lastRabit = null;
+	void Awake() {
+		lastRabit = this;
+	}
 }
